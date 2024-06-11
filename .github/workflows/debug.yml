@@ -4,12 +4,13 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
+      - main  # oder den Branch Ihrer Wahl
     paths:
       - '**/*.java'
       - '**/*.xml'
     paths-ignore:
       - '**/README.md'
+    # Suche nach spezifischem Commit-Kommentar
     commit-message:
       - 'Add: *'
 
