@@ -1,8 +1,10 @@
 package com.chaquo.python.console;
 
 import android.app.*;
-import com.chaquo.python.utils.*;
+import android.content.Context;
+import android.content.Intent;
 import android.os.Environment;
+import android.util.Log;
 import java.io.*;
 
 public class MainActivity extends PythonConsoleActivity {
