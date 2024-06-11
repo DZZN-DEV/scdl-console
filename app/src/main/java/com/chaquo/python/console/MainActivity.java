@@ -1,16 +1,15 @@
 package com.chaquo.python.console;
 
-import android.app.*;
+import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Environment;
 import android.util.Log;
-import java.io.*;
+import com.chaquo.python.utils.PythonConsoleActivity;
+import java.io.FileWriter;
+import java.io.IOException;
 
 public class MainActivity extends PythonConsoleActivity {
 
-    // On API level 31 and higher, pressing Back in a launcher activity sends it to the back by
-    // default, but that would make it difficult to restart the activity.
     @Override public void onBackPressed() {
         finish();
     }
@@ -29,7 +28,6 @@ public class MainActivity extends PythonConsoleActivity {
         }
     }
 
-    // Perfect crash handler
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
@@ -43,9 +41,8 @@ public class MainActivity extends PythonConsoleActivity {
 
     private void handleUncaughtException(Thread t, Throwable e) {
         String errorMessage = "Error: " + e.getMessage() + "\n";
-        errorMessage += "Stack trace: " + android.util.Log.getStackTraceString(e);
+        errorMessage += "Stack trace: " + Log.getStackTraceString(e);
 
-        // Save error message to internal storage as a .txt file
         String filename = "error_log.txt";
         String filepath = getFilesDir().getPath() + "/" + filename;
         try {
@@ -53,11 +50,9 @@ public class MainActivity extends PythonConsoleActivity {
             writer.write(errorMessage);
             writer.close();
         } catch (IOException ex) {
-            // Handle file writing error
             Log.e("Error", "Failed to write error log to file", ex);
         }
 
-        // Restart the app
         Intent intent = new Intent(this, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
