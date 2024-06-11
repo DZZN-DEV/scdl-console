@@ -27,8 +27,16 @@ jobs:
       run: ./gradlew assembleDebug --stacktrace
 
     - name: Upload APKs as Artifacts
-      uses: actions/upload-artifact@v4.3.3
-      with:
-        name: debug-apks
-        path: app/build/outputs/apk/**/*.apk
-        
+      shell: bash
+      run: |
+        for apk in $(find app/build/outputs/apk -name "*.apk"); do
+          apk_name=$(basename "$apk")
+          echo "Uploading $apk_name"
+          gh api -X POST \
+            -F name="$apk_name" \
+            -F label="$apk_name" \
+            -F artifact=@"$apk" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/zip" \
+            "/repos/${{ github.repository }}/actions/artifacts"
+        done
