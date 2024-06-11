@@ -17,14 +17,11 @@ jobs:
         distribution: 'zulu'
         java-version: '17'
 
-    - name: Create Properties File
-      run: touch local.properties
-
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
     - name: Build debug APK
-      run: ./gradlew assembleDebug --stacktrace
+      run: ./gradlew assembleDebug
 
     - name: Upload APKs as Artifacts
       shell: bash
@@ -36,7 +33,7 @@ jobs:
             -F name="$apk_name" \
             -F label="$apk_name" \
             -F artifact=@"$apk" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Authorization: token ${{ secrets.TOKEN }}" \
             -H "Content-Type: application/zip" \
             "/repos/${{ github.repository }}/actions/artifacts"
         done
