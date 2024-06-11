@@ -7,6 +7,24 @@
     android:layout_height="match_parent"
     tools:context="com.chaquo.python.utils.ConsoleActivity">
 
+    <ListView
+        android:id="@+id/script_list_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp" />
+
+    <EditText
+        android:id="@+id/script_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter Python script" />
+
+    <Button
+        android:id="@+id/execute_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Execute" />
+
     <EditText
         android:id="@+id/etInput"
         android:visibility="gone"
