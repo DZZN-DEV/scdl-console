@@ -15,7 +15,7 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         python {
             pip {
-                install "six"
+                install "git+https://github.com/Psylo-ext/scdl-android.git"
             }
         }
         ndk {
