@@ -75,7 +75,7 @@ public class MainActivity extends PythonConsoleActivity {
 
         String maxTracks = "5"; // For example purposes, this could be dynamic
         String downloadFavorites = "true"; // For example purposes, this could be dynamic
-        // String authToken = "your_auth_token"; Replace with actual token if needed
+        String authToken = "your_auth_token"; // Replace with actual token if needed
         String downloadPath = Utils.getInternalStoragePath(this); // Use internal storage path
 
         new Thread(() -> {
