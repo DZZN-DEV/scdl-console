@@ -96,9 +96,6 @@ public class MainActivity extends PythonConsoleActivity {
 
         // Load saved download path
         downloadPathUri = loadDownloadPath();
-
-        // Check and request permissions
-        PermissionsUtils.checkAndRequestPermissions(this);
     }
 
     @Override
