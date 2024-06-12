@@ -57,7 +57,7 @@ public class MainActivity extends PythonConsoleActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        Permissions.checkAndRequestPermissions(this);
+        // Permissions.checkAndRequestPermissions(this);
 
         // Create LinearLayout
         LinearLayout layout = new LinearLayout(this);
@@ -98,17 +98,17 @@ public class MainActivity extends PythonConsoleActivity {
         downloadPathUri = loadDownloadPath();
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        PermissionsUtils.handlePermissionsResult(requestCode, grantResults, this);
-    }
+    //@Override
+    //public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    //    super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    //    PermissionsUtils.handlePermissionsResult(requestCode, grantResults, this);
+    //}
 
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        PermissionsUtils.handleActivityResult(requestCode, this);
-    }
+    //@Override
+    //public void onActivityResult(int requestCode, int resultCode, Intent data) {
+    //    super.onActivityResult(requestCode, resultCode, data);
+    //    PermissionsUtils.handleActivityResult(requestCode, this);
+    //}
 
     private void executeDownload() {
         String url = urlInput.getText().toString();
@@ -130,7 +130,7 @@ public class MainActivity extends PythonConsoleActivity {
         new Thread(() -> {
             try {
                 Python py = Python.getInstance();
-                PyObject pyObject = py.getModule("scdl_downloader");
+                PyObject pyObject = py.getModule("main");
                 String downloadPath = Utils.getPathFromUri(this, downloadPathUri);
                 PyObject result = pyObject.callAttr("download", url, null, false, null, downloadPath);
 
@@ -195,7 +195,7 @@ public class MainActivity extends PythonConsoleActivity {
         @Override
         public void run() {
             Python py = Python.getInstance();
-            py.getModule("scdl_downloader").callAttr("download", url, null, false, null, downloadPath);
+            py.getModule("main").callAttr("download", url, null, false, null, downloadPath);
         }
     }
 }
