@@ -1,4 +1,4 @@
-packge com.chaquo.python.utils;
+package com.chaquo.python.utils;
 
 import android.app.Activity;
 import android.content.Intent;
