@@ -1,17 +1,14 @@
 package com.chaquo.python.console;
 
-import android.Manifest;
 import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
+import android.provider.DocumentsContract;
 import android.provider.MediaStore;
-import android.provider.Settings;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
@@ -22,16 +19,11 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.chaquo.python.PyObject;
 import com.chaquo.python.Python;
-import com.chaquo.python.utils.PermissionsUtils;
 import com.chaquo.python.utils.PythonConsoleActivity;
 import com.chaquo.python.utils.Utils;
-import com.chaquo.python.utils.Permissions;
-
-import java.io.File;
 
 public class MainActivity extends PythonConsoleActivity {
 
@@ -158,14 +150,53 @@ public class MainActivity extends PythonConsoleActivity {
     }
 
     private String getRealPathFromURI(Uri uri) {
-        String[] projection = { MediaStore.Images.Media.DATA };
-        Cursor cursor = getContentResolver().query(uri, projection, null, null, null);
-        if (cursor != null) {
-            int columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
-            cursor.moveToFirst();
-            String path = cursor.getString(columnIndex);
-            cursor.close();
-            return path;
+        String realPath = null;
+
+        if (DocumentsContract.isDocumentUri(this, uri)) {
+            String documentId = DocumentsContract.getDocumentId(uri);
+            if (uri.getAuthority().equals("com.android.externalstorage.documents")) {
+                String[] split = documentId.split(":");
+                String type = split[0];
+                if ("primary".equalsIgnoreCase(type)) {
+                    realPath = Environment.getExternalStorageDirectory() + "/" + split[1];
+                }
+            } else if (uri.getAuthority().equals("com.android.providers.downloads.documents")) {
+                Uri contentUri = Uri.parse("content://downloads/public_downloads");
+                Uri finalUri = ContentUris.withAppendedId(contentUri, Long.parseLong(documentId));
+                realPath = getDataColumn(this, finalUri, null, null);
+            } else if (uri.getAuthority().equals("com.android.providers.media.documents")) {
+                String[] split = documentId.split(":");
+                String type = split[0];
+                Uri contentUri = null;
+                if ("image".equals(type)) {
+                    contentUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+                } else if ("video".equals(type)) {
+                    contentUri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
+                } else if ("audio".equals(type)) {
+                    contentUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+                }
+                String selection = "_id=?";
+                String[] selectionArgs = new String[]{split[1]};
+                realPath = getDataColumn(this, contentUri, selection, selectionArgs);
+            }
+        } else if ("content".equalsIgnoreCase(uri.getScheme())) {
+            realPath = getDataColumn(this, uri, null, null);
+        } else if ("file".equalsIgnoreCase(uri.getScheme())) {
+            realPath = uri.getPath();
+        }
+
+        return realPath;
+    }
+
+    private String getDataColumn(Context context, Uri uri, String selection, String[] selectionArgs) {
+        String[] projection = {MediaStore.Images.Media.DATA};
+        try (Cursor cursor = context.getContentResolver().query(uri, projection, selection, selectionArgs, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int columnIndex = cursor.getColumnIndexOrThrow(projection[0]);
+                return cursor.getString(columnIndex);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         return null;
     }
