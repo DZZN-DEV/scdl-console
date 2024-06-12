@@ -44,7 +44,10 @@ public class MainActivity extends PythonConsoleActivity {
             result -> {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                     downloadPathUri = result.getData().getData();
-                    saveDownloadPath(downloadPathUri);
+                    if (downloadPathUri != null) {
+                        getContentResolver().takePersistableUriPermission(downloadPathUri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                        saveDownloadPath(downloadPathUri);
+                    }
                 }
             });
 
@@ -96,6 +99,7 @@ public class MainActivity extends PythonConsoleActivity {
 
     private void checkAndRequestPermissions() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE},
@@ -200,7 +204,7 @@ public class MainActivity extends PythonConsoleActivity {
         @Override
         public void run() {
             Python py = Python.getInstance();
-            py.getModule("main").callAttr("download", url, null, false, null, downloadPath);
+            py.getModule("scdl_downloader").callAttr("download", url, null, false, null, downloadPath);
         }
     }
 }
