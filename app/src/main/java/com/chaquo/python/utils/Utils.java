@@ -2,6 +2,12 @@ package com.chaquo.python.utils;
 
 import android.content.*;
 import android.content.res.*;
+import android.net.Uri;
+import android.os.Environment;
+import java.io.File;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 
 public class Utils {
     /** Make this package easy to copy to other apps by avoiding direct "R" references. (It
