@@ -153,7 +153,7 @@ public class MainActivity extends PythonConsoleActivity {
         public void run() {
             Python py = Python.getInstance();
             String downloadPath = Utils.getInternalStoragePath(getApplication());
-            py.getModule("scdl_downloader").callAttr("download", url, null, false, null, downloadPath);
+            py.getModule("main").callAttr("download", url, null, false, null, downloadPath);
         }
     }
 }
