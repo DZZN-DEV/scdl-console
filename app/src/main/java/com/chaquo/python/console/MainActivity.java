@@ -2,8 +2,13 @@ package com.chaquo.python.console;
 
 import android.Manifest;
 import android.app.Application;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.DocumentsContract;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
@@ -11,6 +16,9 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.chaquo.python.PyObject;
@@ -23,9 +31,22 @@ import java.io.File;
 public class MainActivity extends PythonConsoleActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 100;
+    private static final String PREFS_NAME = "DownloadPrefs";
+    private static final String PREF_DOWNLOAD_PATH = "download_path";
+
     private EditText urlInput;
     private TextView tvOutput;
     private ScrollView svOutput;
+    private Uri downloadPathUri;
+
+    private final ActivityResultLauncher<Intent> directoryPickerLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    downloadPathUri = result.getData().getData();
+                    saveDownloadPath(downloadPathUri);
+                }
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,10 +67,15 @@ public class MainActivity extends PythonConsoleActivity {
         urlInput.setHint("Enter SoundCloud URL");
         layout.addView(urlInput);
 
-        // Button erstellen
+        // Button zum Herunterladen erstellen
         Button executeButton = new Button(this);
         executeButton.setText("Download");
         layout.addView(executeButton);
+
+        // Button zum Auswählen des Download-Pfads erstellen
+        Button selectPathButton = new Button(this);
+        selectPathButton.setText("Select Download Path");
+        layout.addView(selectPathButton);
 
         // ScrollView und TextView erstellen
         svOutput = new ScrollView(this);
@@ -60,8 +86,12 @@ public class MainActivity extends PythonConsoleActivity {
         // Layout setzen
         setContentView(layout);
 
-        // Button-Klick-Ereignis behandeln
+        // Button-Klick-Ereignisse behandeln
         executeButton.setOnClickListener(v -> executeDownload());
+        selectPathButton.setOnClickListener(v -> openDirectoryPicker());
+
+        // Gespeicherten Download-Pfad laden
+        downloadPathUri = loadDownloadPath();
     }
 
     private void checkAndRequestPermissions() {
@@ -85,12 +115,17 @@ public class MainActivity extends PythonConsoleActivity {
             return;
         }
 
+        if (downloadPathUri == null) {
+            Toast.makeText(this, "Please select a download path", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         new Thread(() -> {
             try {
                 Python py = Python.getInstance();
-                PyObject pyObject = py.getModule("scdl_downloader");  // Das Python-Skript importieren
-                String downloadPath = Utils.getInternalStoragePath(this);
-                PyObject result = pyObject.callAttr("download", url, null, false, null, downloadPath); // Die Methode mit Argumenten aufrufen
+                PyObject pyObject = py.getModule("scdl_downloader");
+                String downloadPath = Utils.getPathFromUri(this, downloadPathUri);
+                PyObject result = pyObject.callAttr("download", url, null, false, null, downloadPath);
 
                 runOnUiThread(() -> {
                     tvOutput.setText(result.toString());
@@ -105,25 +140,33 @@ public class MainActivity extends PythonConsoleActivity {
         }).start();
     }
 
+    private void openDirectoryPicker() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        directoryPickerLauncher.launch(intent);
+    }
+
+    private void saveDownloadPath(Uri uri) {
+        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putString(PREF_DOWNLOAD_PATH, uri.toString());
+        editor.apply();
+    }
+
+    private Uri loadDownloadPath() {
+        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String uriString = preferences.getString(PREF_DOWNLOAD_PATH, null);
+        return uriString != null ? Uri.parse(uriString) : null;
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(this, "Permission granted", Toast.LENGTH_SHORT).show();
-                createDownloadFolder();
             } else {
                 Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
-
-    private void createDownloadFolder() {
-        File downloadFolder = new File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "scdl");
-        if (!downloadFolder.exists()) {
-            boolean success = downloadFolder.mkdirs();
-            if (!success) {
-                Toast.makeText(this, "Failed to create download folder", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -140,6 +183,7 @@ public class MainActivity extends PythonConsoleActivity {
 
     public static class Task extends PythonConsoleActivity.Task {
         private String url;
+        private String downloadPath;
 
         public Task(Application app) {
             super(app);
@@ -149,10 +193,13 @@ public class MainActivity extends PythonConsoleActivity {
             this.url = url;
         }
 
+        public void setDownloadPath(String downloadPath) {
+            this.downloadPath = downloadPath;
+        }
+
         @Override
         public void run() {
             Python py = Python.getInstance();
-            String downloadPath = Utils.getInternalStoragePath(getApplication());
             py.getModule("main").callAttr("download", url, null, false, null, downloadPath);
         }
     }
