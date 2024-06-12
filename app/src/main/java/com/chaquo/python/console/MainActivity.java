@@ -1,7 +1,10 @@
 package com.chaquo.python.console;
 
+import android.Manifest;
 import android.app.Application;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
@@ -9,12 +12,17 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import com.chaquo.python.Python;
 import com.chaquo.python.utils.PythonConsoleActivity;
 import com.chaquo.python.utils.Utils;
 
+import java.io.File;
+
 public class MainActivity extends PythonConsoleActivity {
 
+    private static final int PERMISSION_REQUEST_CODE = 100;
     private EditText urlInput;
     private TextView tvOutput;
     private ScrollView svOutput;
@@ -22,6 +30,12 @@ public class MainActivity extends PythonConsoleActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Berechtigungen überprüfen und anfordern
+        checkAndRequestPermissions();
+
+        // Download-Ordner erstellen
+        createDownloadFolder();
 
         // LinearLayout erstellen
         LinearLayout layout = new LinearLayout(this);
@@ -53,6 +67,25 @@ public class MainActivity extends PythonConsoleActivity {
         executeButton.setOnClickListener(v -> executeDownload());
     }
 
+    private void checkAndRequestPermissions() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE},
+                    PERMISSION_REQUEST_CODE);
+        }
+    }
+
+    private void createDownloadFolder() {
+        File downloadFolder = new File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "scdl");
+        if (!downloadFolder.exists()) {
+            boolean success = downloadFolder.mkdirs();
+            if (!success) {
+                Toast.makeText(this, "Failed to create download folder", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
     private void executeDownload() {
         String url = urlInput.getText().toString();
         if (url.isEmpty()) {
@@ -65,10 +98,36 @@ public class MainActivity extends PythonConsoleActivity {
             return;
         }
 
-        // Task ausführen
-        Task task = new Task(getApplication());
-        task.setUrl(url);
-        task.run();
+        new Thread(() -> {
+            try {
+                Python py = Python.getInstance();
+                PyObject pyObject = py.getModule("main");
+                PyObject result = pyObject.callAttr("download", url);
+
+                runOnUiThread(() -> {
+                    tvOutput.setText(result.toString());
+                    svOutput.fullScroll(ScrollView.FOCUS_DOWN);
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    tvOutput.setText("Error: " + e.getMessage());
+                    svOutput.fullScroll(ScrollView.FOCUS_DOWN);
+                });
+            }
+        }).start();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "Permission granted", Toast.LENGTH_SHORT).show();
+                createDownloadFolder();
+            } else {
+                Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     @Override
