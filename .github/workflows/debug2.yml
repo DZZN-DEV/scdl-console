@@ -9,12 +9,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.0
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch }}
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: '17'
@@ -25,7 +25,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.0
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch }}
 
@@ -47,7 +47,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.0
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch }}
 
@@ -57,16 +57,23 @@ jobs:
           name: debug-apk
           path: .
 
-      - name: Release APKs as GitHub Artifact
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
-        run: |
-          for apk in $(find . -name "*.apk"); do
-            apk_name=$(basename "$apk")
-            echo "Uploading $apk_name"
-            curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Content-Type: application/vnd.android.package-archive" \
-              --data-binary @"$apk" \
-              "https://api.github.com/repos/${{ github.repository }}/releases/assets?name=$apk_name"
-            echo "Uploaded $apk_name"
-          done
+        with:
+          tag_name: debug-${{ github.run_number }}
+          release_name: Debug Release ${{ github.run_number }}
+          draft: false
+          prerelease: false
+
+      - name: Upload APK to Release
+        uses: actions/upload-release-asset@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./app/build/outputs/apk/debug/*.apk
+          asset_name: debug.apk
+          asset_content_type: application/vnd.android.package-archive
