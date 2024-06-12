@@ -1,15 +1,11 @@
 package com.chaquo.python.console;
 
-import android.Manifest;
 import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.provider.Settings;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -21,18 +17,16 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
+import androidx.annotation.RequiresApi;
 import androidx.core.content.ContextCompat;
 import com.chaquo.python.PyObject;
 import com.chaquo.python.Python;
+import com.chaquo.python.utils.PermissionsUtils;
 import com.chaquo.python.utils.PythonConsoleActivity;
 import com.chaquo.python.utils.Utils;
 
-import java.io.File;
-
 public class MainActivity extends PythonConsoleActivity {
 
-    private static final int PERMISSION_REQUEST_CODE = 100;
     private static final String PREFS_NAME = "DownloadPrefs";
     private static final String PREF_DOWNLOAD_PATH = "download_path";
 
@@ -96,51 +90,21 @@ public class MainActivity extends PythonConsoleActivity {
         downloadPathUri = loadDownloadPath();
 
         // Berechtigungen überprüfen und anfordern
-        checkAndRequestPermissions();
-    }
-
-    private void checkAndRequestPermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (!Environment.isExternalStorageManager()) {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-                intent.setData(Uri.parse("package:" + getPackageName()));
-                startActivityForResult(intent, PERMISSION_REQUEST_CODE);
-            }
-        } else {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
-                    || ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, new String[]{
-                        Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                        Manifest.permission.READ_EXTERNAL_STORAGE
-                }, PERMISSION_REQUEST_CODE);
-            }
+        if (!PermissionsUtils.checkAndRequestPermissions(this)) {
+            return;
         }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "Permission granted", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show();
-            }
-        }
+        PermissionsUtils.handlePermissionsResult(requestCode, grantResults, this);
     }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                if (Environment.isExternalStorageManager()) {
-                    Toast.makeText(this, "All files access granted", Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(this, "All files access denied", Toast.LENGTH_SHORT).show();
-                }
-            }
-        }
+        PermissionsUtils.handleActivityResult(requestCode, this);
     }
 
     private void executeDownload() {
