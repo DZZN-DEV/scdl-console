@@ -4,7 +4,6 @@ import android.Manifest;
 import android.app.Application;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.os.Environment;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
@@ -81,7 +80,7 @@ public class MainActivity extends PythonConsoleActivity {
             return;
         }
 
-        if (!Utils.isValidURL(url)) {  // Hier den Methodennamen korrigieren
+        if (!Utils.isValidURL(url)) {
             Toast.makeText(this, "Please enter a valid URL", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -89,9 +88,9 @@ public class MainActivity extends PythonConsoleActivity {
         new Thread(() -> {
             try {
                 Python py = Python.getInstance();
-                PyObject pyObject = py.getModule("main");  // PyObject Klasse importieren
+                PyObject pyObject = py.getModule("scdl_downloader");  // Das Python-Skript importieren
                 String downloadPath = Utils.getInternalStoragePath(this);
-                PyObject result = pyObject.callAttr("download", url, downloadPath);
+                PyObject result = pyObject.callAttr("download", url, null, false, null, downloadPath); // Die Methode mit Argumenten aufrufen
 
                 runOnUiThread(() -> {
                     tvOutput.setText(result.toString());
@@ -154,7 +153,7 @@ public class MainActivity extends PythonConsoleActivity {
         public void run() {
             Python py = Python.getInstance();
             String downloadPath = Utils.getInternalStoragePath(getApplication());
-            py.getModule("main").callAttr("download", url, downloadPath);
+            py.getModule("scdl_downloader").callAttr("download", url, null, false, null, downloadPath);
         }
     }
 }
