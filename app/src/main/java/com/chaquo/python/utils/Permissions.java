@@ -9,6 +9,8 @@ import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.appcompat.app.AlertDialog;
+import java.util.List;
+import java.util.ArrayList;
 
 public class Permissions {
 
