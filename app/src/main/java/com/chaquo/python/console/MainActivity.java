@@ -1,11 +1,14 @@
 package com.chaquo.python.console;
 
+import android.Manifest;
 import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.Settings;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -17,13 +20,15 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.chaquo.python.PyObject;
 import com.chaquo.python.Python;
 import com.chaquo.python.utils.PermissionsUtils;
 import com.chaquo.python.utils.PythonConsoleActivity;
 import com.chaquo.python.utils.Utils;
+
+import java.io.File;
 
 public class MainActivity extends PythonConsoleActivity {
 
@@ -51,48 +56,46 @@ public class MainActivity extends PythonConsoleActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // LinearLayout erstellen
+        // Create LinearLayout
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // URL-Eingabe erstellen
+        // Create URL input
         urlInput = new EditText(this);
         urlInput.setHint("Enter SoundCloud URL");
         layout.addView(urlInput);
 
-        // Button zum Herunterladen erstellen
+        // Create download button
         Button executeButton = new Button(this);
         executeButton.setText("Download");
         layout.addView(executeButton);
 
-        // Button zum Auswählen des Download-Pfads erstellen
+        // Create select path button
         Button selectPathButton = new Button(this);
         selectPathButton.setText("Select Download Path");
         layout.addView(selectPathButton);
 
-        // ScrollView und TextView erstellen
+        // Create ScrollView and TextView
         svOutput = new ScrollView(this);
         tvOutput = new TextView(this);
         svOutput.addView(tvOutput);
         layout.addView(svOutput);
 
-        // Layout setzen
+        // Set the layout
         setContentView(layout);
 
-        // Button-Klick-Ereignisse behandeln
+        // Handle button click events
         executeButton.setOnClickListener(v -> executeDownload());
         selectPathButton.setOnClickListener(v -> openDirectoryPicker());
 
-        // Gespeicherten Download-Pfad laden
+        // Load saved download path
         downloadPathUri = loadDownloadPath();
 
-        // Berechtigungen überprüfen und anfordern
-        if (!PermissionsUtils.checkAndRequestPermissions(this)) {
-            return;
-        }
+        // Check and request permissions
+        PermissionsUtils.checkAndRequestPermissions(this);
     }
 
     @Override
@@ -127,7 +130,7 @@ public class MainActivity extends PythonConsoleActivity {
         new Thread(() -> {
             try {
                 Python py = Python.getInstance();
-                PyObject pyObject = py.getModule("main");
+                PyObject pyObject = py.getModule("scdl_downloader");
                 String downloadPath = Utils.getPathFromUri(this, downloadPathUri);
                 PyObject result = pyObject.callAttr("download", url, null, false, null, downloadPath);
 
@@ -192,7 +195,7 @@ public class MainActivity extends PythonConsoleActivity {
         @Override
         public void run() {
             Python py = Python.getInstance();
-            py.getModule("main").callAttr("download", url, null, false, null, downloadPath);
+            py.getModule("scdl_downloader").callAttr("download", url, null, false, null, downloadPath);
         }
     }
 }
