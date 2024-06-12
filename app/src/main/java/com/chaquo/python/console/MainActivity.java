@@ -17,10 +17,10 @@ import androidx.core.content.ContextCompat;
 import com.chaquo.python.PyObject;
 import com.chaquo.python.Python;
 import com.chaquo.python.utils.PythonConsoleActivity;
+import com.chaquo.python.utils.Utils;
 import org.json.JSONException;
 import org.json.JSONObject;
 import java.io.FileWriter;
-import com.chaquo.python.utils.Utils;
 import java.io.IOException;
 
 public class MainActivity extends PythonConsoleActivity {
@@ -74,19 +74,22 @@ public class MainActivity extends PythonConsoleActivity {
         }
 
         String maxTracks = "5"; // For example purposes, this could be dynamic
+        ll
         String downloadFavorites = "true"; // For example purposes, this could be dynamic
-        String authToken = "your_auth_token"; // Replace with actual token if needed
+        // String authToken = "your_auth_token"; Replace with actual token if needed
         String downloadPath = Utils.getInternalStoragePath(this); // Use internal storage path
 
-        try {
-            Python py = Python.getInstance();
-            PyObject mainModule = py.getModule("main");
-            PyObject result = mainModule.callAttr("main", url, maxTracks, downloadFavorites, authToken, downloadPath);
-            handleResult(result);
-        } catch (Exception e) {
-            Log.e("MainActivity", "Error calling Python script", e);
-            Toast.makeText(this, "Error calling Python script: " + e.getMessage(), Toast.LENGTH_LONG).show();
-        }
+        new Thread(() -> {
+            try {
+                Python py = Python.getInstance();
+                PyObject mainModule = py.getModule("main");
+                PyObject result = mainModule.callAttr("main", url, maxTracks, downloadFavorites, authToken, downloadPath);
+                runOnUiThread(() -> handleResult(result));
+            } catch (Exception e) {
+                Log.e("MainActivity", "Error calling Python script", e);
+                runOnUiThread(() -> Toast.makeText(this, "Error calling Python script: " + e.getMessage(), Toast.LENGTH_LONG).show());
+            }
+        }).start();
     }
 
     private void handleResult(PyObject result) {
@@ -141,10 +144,8 @@ public class MainActivity extends PythonConsoleActivity {
 
         String filename = "error_log.txt";
         String filepath = getFilesDir().getPath() + "/" + filename;
-        try {
-            FileWriter writer = new FileWriter(filepath);
+        try (FileWriter writer = new FileWriter(filepath)) {
             writer.write(errorMessage);
-            writer.close();
         } catch (IOException ex) {
             Log.e("Error", "Failed to write error log to file", ex);
         }
