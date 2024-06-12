@@ -27,6 +27,7 @@ import com.chaquo.python.Python;
 import com.chaquo.python.utils.PermissionsUtils;
 import com.chaquo.python.utils.PythonConsoleActivity;
 import com.chaquo.python.utils.Utils;
+import com.chaquo.python.utils.Permissions;
 
 import java.io.File;
 
@@ -55,6 +56,8 @@ public class MainActivity extends PythonConsoleActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        Permissions.checkAndRequestPermissions(this);
 
         // Create LinearLayout
         LinearLayout layout = new LinearLayout(this);
