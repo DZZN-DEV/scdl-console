@@ -14,6 +14,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import com.chaquo.python.PyObject;
 import com.chaquo.python.Python;
 import com.chaquo.python.utils.PythonConsoleActivity;
 import com.chaquo.python.utils.Utils;
@@ -33,9 +34,6 @@ public class MainActivity extends PythonConsoleActivity {
 
         // Berechtigungen überprüfen und anfordern
         checkAndRequestPermissions();
-
-        // Download-Ordner erstellen
-        createDownloadFolder();
 
         // LinearLayout erstellen
         LinearLayout layout = new LinearLayout(this);
@@ -76,16 +74,6 @@ public class MainActivity extends PythonConsoleActivity {
         }
     }
 
-    private void createDownloadFolder() {
-        File downloadFolder = new File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "scdl");
-        if (!downloadFolder.exists()) {
-            boolean success = downloadFolder.mkdirs();
-            if (!success) {
-                Toast.makeText(this, "Failed to create download folder", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
-
     private void executeDownload() {
         String url = urlInput.getText().toString();
         if (url.isEmpty()) {
@@ -93,7 +81,7 @@ public class MainActivity extends PythonConsoleActivity {
             return;
         }
 
-        if (!Utils.isValidUrl(url)) {
+        if (!Utils.isValidURL(url)) {  // Hier den Methodennamen korrigieren
             Toast.makeText(this, "Please enter a valid URL", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -101,8 +89,9 @@ public class MainActivity extends PythonConsoleActivity {
         new Thread(() -> {
             try {
                 Python py = Python.getInstance();
-                PyObject pyObject = py.getModule("main");
-                PyObject result = pyObject.callAttr("download", url);
+                PyObject pyObject = py.getModule("main");  // PyObject Klasse importieren
+                String downloadPath = Utils.getInternalStoragePath(this);
+                PyObject result = pyObject.callAttr("download", url, downloadPath);
 
                 runOnUiThread(() -> {
                     tvOutput.setText(result.toString());
@@ -126,6 +115,16 @@ public class MainActivity extends PythonConsoleActivity {
                 createDownloadFolder();
             } else {
                 Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void createDownloadFolder() {
+        File downloadFolder = new File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "scdl");
+        if (!downloadFolder.exists()) {
+            boolean success = downloadFolder.mkdirs();
+            if (!success) {
+                Toast.makeText(this, "Failed to create download folder", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -154,7 +153,8 @@ public class MainActivity extends PythonConsoleActivity {
         @Override
         public void run() {
             Python py = Python.getInstance();
-            py.getModule("main").callAttr("download", url);
+            String downloadPath = Utils.getInternalStoragePath(getApplication());
+            py.getModule("main").callAttr("download", url, downloadPath);
         }
     }
 }
