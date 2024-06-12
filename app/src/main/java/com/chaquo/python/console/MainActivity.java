@@ -5,10 +5,12 @@ import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.provider.Settings;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -39,16 +41,21 @@ public class MainActivity extends PythonConsoleActivity {
     private EditText urlInput;
     private TextView tvOutput;
     private ScrollView svOutput;
-    private Uri downloadPathUri;
+    private String downloadPath;
 
     private final ActivityResultLauncher<Intent> directoryPickerLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                    downloadPathUri = result.getData().getData();
+                    Uri downloadPathUri = result.getData().getData();
                     if (downloadPathUri != null) {
                         getContentResolver().takePersistableUriPermission(downloadPathUri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                        saveDownloadPath(downloadPathUri);
+                        downloadPath = getRealPathFromURI(downloadPathUri);
+                        if (downloadPath != null) {
+                            saveDownloadPath(downloadPath);
+                        } else {
+                            Toast.makeText(this, "Failed to get real path from URI", Toast.LENGTH_SHORT).show();
+                        }
                     }
                 }
             });
@@ -56,8 +63,6 @@ public class MainActivity extends PythonConsoleActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        // Permissions.checkAndRequestPermissions(this);
 
         // Create LinearLayout
         LinearLayout layout = new LinearLayout(this);
@@ -95,20 +100,8 @@ public class MainActivity extends PythonConsoleActivity {
         selectPathButton.setOnClickListener(v -> openDirectoryPicker());
 
         // Load saved download path
-        downloadPathUri = loadDownloadPath();
+        downloadPath = loadDownloadPath();
     }
-
-    //@Override
-    //public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-    //    super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-    //    PermissionsUtils.handlePermissionsResult(requestCode, grantResults, this);
-    //}
-
-    //@Override
-    //public void onActivityResult(int requestCode, int resultCode, Intent data) {
-    //    super.onActivityResult(requestCode, resultCode, data);
-    //    PermissionsUtils.handleActivityResult(requestCode, this);
-    //}
 
     private void executeDownload() {
         String url = urlInput.getText().toString();
@@ -122,7 +115,7 @@ public class MainActivity extends PythonConsoleActivity {
             return;
         }
 
-        if (downloadPathUri == null) {
+        if (downloadPath == null) {
             Toast.makeText(this, "Please select a download path", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -131,7 +124,6 @@ public class MainActivity extends PythonConsoleActivity {
             try {
                 Python py = Python.getInstance();
                 PyObject pyObject = py.getModule("main");
-                String downloadPath = Utils.getPathFromUri(this, downloadPathUri);
                 PyObject result = pyObject.callAttr("download", url, null, false, null, downloadPath);
 
                 runOnUiThread(() -> {
@@ -153,17 +145,29 @@ public class MainActivity extends PythonConsoleActivity {
         directoryPickerLauncher.launch(intent);
     }
 
-    private void saveDownloadPath(Uri uri) {
+    private void saveDownloadPath(String path) {
         SharedPreferences preferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = preferences.edit();
-        editor.putString(PREF_DOWNLOAD_PATH, uri.toString());
+        editor.putString(PREF_DOWNLOAD_PATH, path);
         editor.apply();
     }
 
-    private Uri loadDownloadPath() {
+    private String loadDownloadPath() {
         SharedPreferences preferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        String uriString = preferences.getString(PREF_DOWNLOAD_PATH, null);
-        return uriString != null ? Uri.parse(uriString) : null;
+        return preferences.getString(PREF_DOWNLOAD_PATH, null);
+    }
+
+    private String getRealPathFromURI(Uri uri) {
+        String[] projection = { MediaStore.Images.Media.DATA };
+        Cursor cursor = getContentResolver().query(uri, projection, null, null, null);
+        if (cursor != null) {
+            int columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+            cursor.moveToFirst();
+            String path = cursor.getString(columnIndex);
+            cursor.close();
+            return path;
+        }
+        return null;
     }
 
     @Override
