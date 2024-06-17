@@ -41,6 +41,7 @@ public class MainActivity extends PythonConsoleActivity {
     private TextView tvDownloadPath;
     private ScrollView svOutput;
     private Uri downloadPathUri;
+    private String downloadPath;
 
     private final ActivityResultLauncher<Intent> directoryPickerLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
@@ -49,8 +50,13 @@ public class MainActivity extends PythonConsoleActivity {
                     downloadPathUri = result.getData().getData();
                     if (downloadPathUri != null) {
                         getContentResolver().takePersistableUriPermission(downloadPathUri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                        saveDownloadPath(downloadPathUri);
-                        displayDownloadPath(downloadPathUri);
+                        downloadPath = getPathFromUri(downloadPathUri);
+                        if (downloadPath != null) {
+                            saveDownloadPath(downloadPathUri);
+                            tvDownloadPath.setText("Download Path: " + downloadPath);
+                        } else {
+                            Toast.makeText(this, "Invalid download path selected.", Toast.LENGTH_SHORT).show();
+                        }
                     }
                 } else {
                     Toast.makeText(this, "Failed to select directory. Please try again.", Toast.LENGTH_SHORT).show();
@@ -96,7 +102,10 @@ public class MainActivity extends PythonConsoleActivity {
 
         downloadPathUri = loadDownloadPath();
         if (downloadPathUri != null) {
-            displayDownloadPath(downloadPathUri);
+            downloadPath = getPathFromUri(downloadPathUri);
+            if (downloadPath != null) {
+                tvDownloadPath.setText("Download Path: " + downloadPath);
+            }
         }
     }
 
@@ -113,18 +122,19 @@ public class MainActivity extends PythonConsoleActivity {
     }
 
     private void executeDownload() {
-        String url = urlInput.getText().toString();
+        final String url = urlInput.getText().toString();
         if (url.isEmpty()) {
-            url = "https://soundcloud.com/r2rmoe/angelic";  // Default SoundCloud URL
-        }
-
-        if (!Utils.isValidURL(url)) {
-            Toast.makeText(this, "Please enter a valid URL", Toast.LENGTH_SHORT).show();
+            runOnUiThread(() -> Toast.makeText(this, "Please enter a URL", Toast.LENGTH_SHORT).show());
             return;
         }
 
-        if (downloadPathUri == null) {
-            Toast.makeText(this, "Please select a download path", Toast.LENGTH_SHORT).show();
+        if (!Utils.isValidURL(url)) {
+            runOnUiThread(() -> Toast.makeText(this, "Please enter a valid URL", Toast.LENGTH_SHORT).show());
+            return;
+        }
+
+        if (downloadPath == null) {
+            runOnUiThread(() -> Toast.makeText(this, "Please select a download path", Toast.LENGTH_SHORT).show());
             return;
         }
 
@@ -132,10 +142,6 @@ public class MainActivity extends PythonConsoleActivity {
             try {
                 Python py = Python.getInstance();
                 PyObject pyObject = py.getModule("main");
-                String downloadPath = getPathFromUri(downloadPathUri);
-                if (downloadPath == null) {
-                    throw new IllegalArgumentException("Invalid download path");
-                }
                 PyObject result = pyObject.callAttr("download", url, null, false, null, downloadPath);
 
                 runOnUiThread(() -> {
@@ -211,11 +217,6 @@ public class MainActivity extends PythonConsoleActivity {
             }
         }
         return null;
-    }
-
-    private void displayDownloadPath(Uri uri) {
-        String path = getPathFromUri(uri);
-        tvDownloadPath.setText("Download Path: " + (path != null ? path : "Invalid Path"));
     }
 
     @Override
