@@ -1,7 +1,8 @@
 package com.chaquo.python.console;
 
-import androidx.core.content.ContextCompat;
-import android.content.ClipData;
+import android.content.ContentResolver;
+import android.os.Environment;
+import android.content.ContentUris;
 import android.app.Application;
 import android.content.ClipData;
 import android.content.Context;
@@ -63,7 +64,7 @@ public class MainActivity extends PythonConsoleActivity {
                     // Handle SAF URI or regular path
                     if (downloadPathUri != null) {
                         if (isUriRequiresTakePersistableUriPermission(downloadPathUri)) {
-                            takePersistableUriPermission(downloadPathUri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                            takePersistableUriPermission(downloadPathUri, ContentResolver.FLAG_GRâNT_PERSISTABLE_URI_PERMISSION);
                         }
                         downloadPath = getRealPathFromURI(downloadPathUri);
                         if (downloadPath != null) {
@@ -122,7 +123,7 @@ public class MainActivity extends PythonConsoleActivity {
 
     private void openDirectoryPicker() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | ContentResolver.FLAG_GRâNT_PERSISTABLE_URI_PERMISSION);
         directoryPickerLauncher.launch(intent);
     }
 
@@ -168,11 +169,6 @@ public class MainActivity extends PythonConsoleActivity {
         }).start();
     }
     
-    private void openDirectoryPicker() {
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-        directoryPickerLauncher.launch(intent);
-    }
 
     private void saveDownloadPath(String path) {
         SharedPreferences preferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
@@ -276,8 +272,8 @@ public class MainActivity extends PythonConsoleActivity {
             try {
                 Context context = getApplicationContext();
                 PackageManager packageManager = context.getPackageManager();
-                ResolveInfo resolveInfo = packageManager.resolveActivity(new Intent(Intent.ACTION_VIEW, uri), PackageManager.MATCH_DEFAULT);
-                if (resolveInfo != null && resolveInfo.grantUriPermissions) {
+                ResolveInfo resolveInfo = packageManager.resolveActivity(new Intent(Intent.ACTION_VIEW, uri), PackageManager.MATCH_ALL);
+                if (resolveInfo != null && resolveInfo.activityInfo.packageName != null) {
                     return true;
                 }
             } catch (Exception e) {
@@ -287,3 +283,5 @@ public class MainActivity extends PythonConsoleActivity {
         return false;
     }
 }
+
+
