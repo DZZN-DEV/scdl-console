@@ -4,9 +4,12 @@ import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.DocumentsContract;
+import android.provider.MediaStore;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
@@ -19,7 +22,6 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.documentfile.provider.DocumentFile;
 import com.chaquo.python.PyObject;
 import com.chaquo.python.Python;
 import com.chaquo.python.utils.PermissionsUtils;
@@ -123,12 +125,11 @@ public class MainActivity extends PythonConsoleActivity {
             try {
                 Python py = Python.getInstance();
                 PyObject pyObject = py.getModule("main");
-                DocumentFile pickedDir = DocumentFile.fromTreeUri(this, downloadPathUri);
-                if (pickedDir == null || !pickedDir.canWrite()) {
+                String downloadPath = getPathFromUri(downloadPathUri);
+                if (downloadPath == null) {
                     throw new IllegalArgumentException("Invalid download path");
                 }
-                File downloadPath = new File(pickedDir.getUri().getPath());
-                PyObject result = pyObject.callAttr("download", url, null, false, null, downloadPath.getAbsolutePath());
+                PyObject result = pyObject.callAttr("download", url, null, false, null, downloadPath);
 
                 runOnUiThread(() -> {
                     tvOutput.setText(result.toString());
@@ -166,6 +167,45 @@ public class MainActivity extends PythonConsoleActivity {
         return uriString != null ? Uri.parse(uriString) : null;
     }
 
+    private String getPathFromUri(Uri uri) {
+        if (DocumentsContract.isDocumentUri(this, uri)) {
+            String docId = DocumentsContract.getDocumentId(uri);
+            String[] split = docId.split(":");
+            String type = split[0];
+            String path = split.length > 1 ? split[1] : "";
+
+            if ("primary".equalsIgnoreCase(type)) {
+                return Environment.getExternalStorageDirectory() + "/" + path;
+            } else {
+                return "/storage/" + type + "/" + path;
+            }
+        } else if ("content".equalsIgnoreCase(uri.getScheme())) {
+            return getDataColumn(this, uri, null, null);
+        } else if ("file".equalsIgnoreCase(uri.getScheme())) {
+            return uri.getPath();
+        }
+        return null;
+    }
+
+    private String getDataColumn(Context context, Uri uri, String selection, String[] selectionArgs) {
+        Cursor cursor = null;
+        final String column = "_data";
+        final String[] projection = { column };
+
+        try {
+            cursor = context.getContentResolver().query(uri, projection, selection, selectionArgs, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                final int index = cursor.getColumnIndexOrThrow(column);
+                return cursor.getString(index);
+            }
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+        return null;
+    }
+
     @Override
     public void onBackPressed() {
         finish();
@@ -198,4 +238,4 @@ public class MainActivity extends PythonConsoleActivity {
             py.getModule("main").callAttr("download", url, null, false, null, downloadPath);
         }
     }
-    }
+                                                    }
