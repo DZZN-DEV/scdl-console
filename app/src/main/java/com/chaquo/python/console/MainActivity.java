@@ -38,6 +38,7 @@ public class MainActivity extends PythonConsoleActivity {
 
     private EditText urlInput;
     private TextView tvOutput;
+    private TextView tvDownloadPath;
     private ScrollView svOutput;
     private Uri downloadPathUri;
 
@@ -49,6 +50,7 @@ public class MainActivity extends PythonConsoleActivity {
                     if (downloadPathUri != null) {
                         getContentResolver().takePersistableUriPermission(downloadPathUri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
                         saveDownloadPath(downloadPathUri);
+                        displayDownloadPath(downloadPathUri);
                     }
                 } else {
                     Toast.makeText(this, "Failed to select directory. Please try again.", Toast.LENGTH_SHORT).show();
@@ -79,6 +81,9 @@ public class MainActivity extends PythonConsoleActivity {
         selectPathButton.setText("Select Download Path");
         layout.addView(selectPathButton);
 
+        tvDownloadPath = new TextView(this);
+        layout.addView(tvDownloadPath);
+
         svOutput = new ScrollView(this);
         tvOutput = new TextView(this);
         svOutput.addView(tvOutput);
@@ -90,6 +95,9 @@ public class MainActivity extends PythonConsoleActivity {
         selectPathButton.setOnClickListener(v -> openDirectoryPicker());
 
         downloadPathUri = loadDownloadPath();
+        if (downloadPathUri != null) {
+            displayDownloadPath(downloadPathUri);
+        }
     }
 
     @Override
@@ -107,8 +115,7 @@ public class MainActivity extends PythonConsoleActivity {
     private void executeDownload() {
         String url = urlInput.getText().toString();
         if (url.isEmpty()) {
-            Toast.makeText(this, "Please enter a URL", Toast.LENGTH_SHORT).show();
-            return;
+            url = "https://soundcloud.com/r2rmoe/angelic";  // Default SoundCloud URL
         }
 
         if (!Utils.isValidURL(url)) {
@@ -206,6 +213,11 @@ public class MainActivity extends PythonConsoleActivity {
         return null;
     }
 
+    private void displayDownloadPath(Uri uri) {
+        String path = getPathFromUri(uri);
+        tvDownloadPath.setText("Download Path: " + (path != null ? path : "Invalid Path"));
+    }
+
     @Override
     public void onBackPressed() {
         finish();
@@ -238,4 +250,4 @@ public class MainActivity extends PythonConsoleActivity {
             py.getModule("main").callAttr("download", url, null, false, null, downloadPath);
         }
     }
-                                                    }
+}
