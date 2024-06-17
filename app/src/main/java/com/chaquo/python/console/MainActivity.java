@@ -1,5 +1,7 @@
 package com.chaquo.python.console;
 
+import androidx.core.content.ContextCompat;
+import android.content.ClipData;
 import android.app.Application;
 import android.content.ClipData;
 import android.content.Context;
