@@ -2,6 +2,11 @@ name: Build and Release APK
 
 on:
   workflow_dispatch:
+    inputs:
+      release:
+        description: 'Check to release the APK'
+        required: true
+        default: 'false'
   push:
     tags:
       - 'Add: *'
@@ -32,7 +37,12 @@ jobs:
           name: apk-artifact-arm64-v8a
           path: app/build/outputs/apk/debug/*.apk
 
+      - name: Check if Release
+        id: check_release
+        run: echo "RELEASE=${{ github.event.inputs.release }}" >> $GITHUB_ENV
+
       - name: Create Release
+        if: env.RELEASE == 'true'
         id: create_release
         uses: actions/create-release@v1
         env:
@@ -44,6 +54,7 @@ jobs:
           prerelease: false
 
       - name: Upload Release Assets
+        if: env.RELEASE == 'true'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
