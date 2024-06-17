@@ -1,5 +1,6 @@
 package com.chaquo.python.console;
 
+import android.Manifest.permission;
 import android.content.ContentResolver;
 import android.os.Environment;
 import android.content.ContentUris;
@@ -273,7 +274,10 @@ public class MainActivity extends PythonConsoleActivity {
                 Context context = getApplicationContext();
                 PackageManager packageManager = context.getPackageManager();
                 ResolveInfo resolveInfo = packageManager.resolveActivity(new Intent(Intent.ACTION_VIEW, uri), PackageManager.MATCH_ALL);
-                if (resolveInfo != null && resolveInfo.activityInfo.packageName != null) {
+                android.util.Log.d("URI Permission", "Checking URI permissions");
+        if (resolveinJavaCode;
+      code 
+        resolveInfo != null && resolveInfo.activityInfo.packageName != null) {
                     return true;
                 }
             } catch (Exception e) {
