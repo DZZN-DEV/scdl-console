@@ -1,14 +1,12 @@
 package com.chaquo.python.console;
 
-import android.Manifest;
 import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.provider.Settings;
+import android.provider.DocumentsContract;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
@@ -21,6 +19,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.documentfile.provider.DocumentFile;
 import com.chaquo.python.PyObject;
 import com.chaquo.python.Python;
 import com.chaquo.python.utils.PermissionsUtils;
@@ -124,11 +123,12 @@ public class MainActivity extends PythonConsoleActivity {
             try {
                 Python py = Python.getInstance();
                 PyObject pyObject = py.getModule("main");
-                String downloadPath = Utils.getPathFromUri(this, downloadPathUri);
-                if (downloadPath == null) {
+                DocumentFile pickedDir = DocumentFile.fromTreeUri(this, downloadPathUri);
+                if (pickedDir == null || !pickedDir.canWrite()) {
                     throw new IllegalArgumentException("Invalid download path");
                 }
-                PyObject result = pyObject.callAttr("download", url, null, false, null, downloadPath);
+                File downloadPath = new File(pickedDir.getUri().getPath());
+                PyObject result = pyObject.callAttr("download", url, null, false, null, downloadPath.getAbsolutePath());
 
                 runOnUiThread(() -> {
                     tvOutput.setText(result.toString());
@@ -198,4 +198,4 @@ public class MainActivity extends PythonConsoleActivity {
             py.getModule("main").callAttr("download", url, null, false, null, downloadPath);
         }
     }
-}
+    }
