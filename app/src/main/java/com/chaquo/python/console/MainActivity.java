@@ -64,7 +64,7 @@ public class MainActivity extends PythonConsoleActivity {
                     // Handle SAF URI or regular path
                     if (downloadPathUri != null) {
                         if (isUriRequiresTakePersistableUriPermission(downloadPathUri)) {
-                            takePersistableUriPermission(downloadPathUri, ContentResolver.FLAG_GRâNT_PERSISTABLE_URI_PERMISSION);
+                            takePersistableUriPermission(downloadPathUri, Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
                         }
                         downloadPath = getRealPathFromURI(downloadPathUri);
                         if (downloadPath != null) {
@@ -123,7 +123,7 @@ public class MainActivity extends PythonConsoleActivity {
 
     private void openDirectoryPicker() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | ContentResolver.FLAG_GRâNT_PERSISTABLE_URI_PERMISSION);
+        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
         directoryPickerLauncher.launch(intent);
     }
 
