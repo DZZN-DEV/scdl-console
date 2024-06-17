@@ -1,11 +1,16 @@
 package com.chaquo.python.console;
 
 import android.app.Application;
+import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.content.res.Resources;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
@@ -38,16 +43,34 @@ public class MainActivity extends PythonConsoleActivity {
     private final ActivityResultLauncher<Intent> directoryPickerLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
-                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                    Uri downloadPathUri = result.getData().getData();
+                if (result.getResultCode() == RESULT_OK) {
+                    Uri downloadPathUri = null;
+
+                    if (result.getData() != null) {
+                        // Check for single or multiple URIs
+                        if (result.getData().hasClipData()) {
+                            ClipData clipData = result.getData().getClipData();
+                            if (clipData.getItemCount() == 1) {
+                                downloadPathUri = clipData.getItemAt(0).getUri();
+                            }
+                        } else {
+                            downloadPathUri = result.getData().getData();
+                        }
+                    }
+
+                    // Handle SAF URI or regular path
                     if (downloadPathUri != null) {
-                        getContentResolver().takePersistableUriPermission(downloadPathUri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                        if (isUriRequiresTakePersistableUriPermission(downloadPathUri)) {
+                            takePersistableUriPermission(downloadPathUri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                        }
                         downloadPath = getRealPathFromURI(downloadPathUri);
                         if (downloadPath != null) {
                             saveDownloadPath(downloadPath);
                         } else {
                             Toast.makeText(this, "Failed to get real path from URI", Toast.LENGTH_SHORT).show();
                         }
+                    } else {
+                        Toast.makeText(this, "Invalid download path", Toast.LENGTH_SHORT).show();
                     }
                 }
             });
@@ -92,7 +115,13 @@ public class MainActivity extends PythonConsoleActivity {
         selectPathButton.setOnClickListener(v -> openDirectoryPicker());
 
         // Load saved download path
-        downloadPath = loadDownloadPath();
+        downloadPath = loadDownloadPath();      
+    }
+
+    private void openDirectoryPicker() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        directoryPickerLauncher.launch(intent);
     }
 
     private void executeDownload() {
@@ -101,23 +130,29 @@ public class MainActivity extends PythonConsoleActivity {
             Toast.makeText(this, "Please enter a URL", Toast.LENGTH_SHORT).show();
             return;
         }
-
+    
         if (!Utils.isValidURL(url)) {
             Toast.makeText(this, "Please enter a valid URL", Toast.LENGTH_SHORT).show();
             return;
         }
-
+    
         if (downloadPath == null) {
             Toast.makeText(this, "Please select a download path", Toast.LENGTH_SHORT).show();
             return;
         }
-
+    
+        // Check if downloadPath is null
+        if (downloadPath == null) {
+            Toast.makeText(this, "Invalid download path", Toast.LENGTH_SHORT).show();
+            return;
+        }
+    
         new Thread(() -> {
             try {
                 Python py = Python.getInstance();
                 PyObject pyObject = py.getModule("main");
                 PyObject result = pyObject.callAttr("download", url, null, false, null, downloadPath);
-
+    
                 runOnUiThread(() -> {
                     tvOutput.setText(result.toString());
                     svOutput.fullScroll(ScrollView.FOCUS_DOWN);
@@ -130,7 +165,7 @@ public class MainActivity extends PythonConsoleActivity {
             }
         }).start();
     }
-
+    
     private void openDirectoryPicker() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
         intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
@@ -232,5 +267,21 @@ public class MainActivity extends PythonConsoleActivity {
             Python py = Python.getInstance();
             py.getModule("main").callAttr("download", url, null, false, null, downloadPath);
         }
+    }
+    
+    private boolean isUriRequiresTakePersistableUriPermission(Uri uri) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            try {
+                Context context = getApplicationContext();
+                PackageManager packageManager = context.getPackageManager();
+                ResolveInfo resolveInfo = packageManager.resolveActivity(new Intent(Intent.ACTION_VIEW, uri), PackageManager.MATCH_DEFAULT);
+                if (resolveInfo != null && resolveInfo.grantUriPermissions) {
+                    return true;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return false;
     }
 }
