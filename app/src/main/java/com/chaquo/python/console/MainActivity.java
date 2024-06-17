@@ -20,14 +20,12 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.chaquo.python.PyObject;
 import com.chaquo.python.Python;
 import com.chaquo.python.utils.PermissionsUtils;
 import com.chaquo.python.utils.PythonConsoleActivity;
 import com.chaquo.python.utils.Utils;
-import com.chaquo.python.utils.Permissions;
 
 import java.io.File;
 
@@ -67,7 +65,7 @@ public class MainActivity extends PythonConsoleActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        Permissions.checkAndRequestPermissions(this);
+        PermissionsUtils.checkAndRequestPermissions(this);
 
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
@@ -113,12 +111,6 @@ public class MainActivity extends PythonConsoleActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         PermissionsUtils.handlePermissionsResult(requestCode, grantResults, this);
-    }
-
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        PermissionsUtils.handleActivityResult(requestCode, this);
     }
 
     private void executeDownload() {
@@ -181,23 +173,42 @@ public class MainActivity extends PythonConsoleActivity {
     }
 
     private String getPathFromUri(Uri uri) {
+        String filePath = null;
         if (DocumentsContract.isDocumentUri(this, uri)) {
-            String docId = DocumentsContract.getDocumentId(uri);
-            String[] split = docId.split(":");
-            String type = split[0];
-            String path = split.length > 1 ? split[1] : "";
-
-            if ("primary".equalsIgnoreCase(type)) {
-                return Environment.getExternalStorageDirectory() + "/" + path;
-            } else {
-                return "/storage/" + type + "/" + path;
+            String documentId = DocumentsContract.getDocumentId(uri);
+            if (uri.getAuthority().equals("com.android.externalstorage.documents")) {
+                String[] split = documentId.split(":");
+                String type = split[0];
+                String relativePath = "/" + split[1];
+                if ("primary".equalsIgnoreCase(type)) {
+                    filePath = Environment.getExternalStorageDirectory() + relativePath;
+                } else {
+                    filePath = "/storage/" + type + relativePath;
+                }
+            } else if (uri.getAuthority().equals("com.android.providers.downloads.documents")) {
+                Uri contentUri = ContentUris.withAppendedId(Uri.parse("content://downloads/public_downloads"), Long.valueOf(documentId));
+                filePath = getDataColumn(this, contentUri, null, null);
+            } else if (uri.getAuthority().equals("com.android.providers.media.documents")) {
+                String[] split = documentId.split(":");
+                String type = split[0];
+                Uri contentUri = null;
+                if ("image".equals(type)) {
+                    contentUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+                } else if ("video".equals(type)) {
+                    contentUri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
+                } else if ("audio".equals(type)) {
+                    contentUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+                }
+                String selection = "_id=?";
+                String[] selectionArgs = new String[]{split[1]};
+                filePath = getDataColumn(this, contentUri, selection, selectionArgs);
             }
         } else if ("content".equalsIgnoreCase(uri.getScheme())) {
-            return getDataColumn(this, uri, null, null);
+            filePath = getDataColumn(this, uri, null, null);
         } else if ("file".equalsIgnoreCase(uri.getScheme())) {
-            return uri.getPath();
+            filePath = uri.getPath();
         }
-        return null;
+        return filePath;
     }
 
     private String getDataColumn(Context context, Uri uri, String selection, String[] selectionArgs) {
